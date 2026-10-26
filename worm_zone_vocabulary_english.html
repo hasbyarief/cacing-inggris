@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <!-- STREAMING_CHUNK:Configuring metadata and external libraries... -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Worm Zone - English Vocabulary Edition</title>
+    <meta name="description" content="Game Worm Zone edukasi vocabulary Bahasa Inggris dengan 10 stage: pakaian, warna, hewan, dan buah-buahan." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        /* STREAMING_CHUNK:Styling the basic layout and fonts... */
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0f172a;
+            font-family: 'Fredoka One', cursive, sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* STREAMING_CHUNK:Styling the UI layers and interactive panels... */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        /* STREAMING_CHUNK:Styling HUD and button animations... */
+        #topHUD {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            z-index: 40;
+        }
+
+        .btn-play, .btn-quiz, .btn-choice, .btn-action {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-play:hover, .btn-quiz:hover, .btn-action:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn-play:active, .btn-quiz:active, .btn-choice:active, .btn-action:active {
+            transform: translateY(1px) scale(0.98);
+        }
+
+        /* STREAMING_CHUNK:Styling selection markers and glow effects... */
+        .selected-ring {
+            box-shadow: 0 0 0 4px #38bdf8, 0 0 16px rgba(56, 189, 248, 0.6);
+            transform: scale(1.1);
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
+            100% { box-shadow: 0 0 25px rgba(234, 179, 8, 0.9); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- STREAMING_CHUNK:Setting up the canvas and Top HUD... -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top In-Game HUD -->
+    <div id="topHUD" class="hidden">
+        <div class="flex gap-3 items-center">
+            <div class="glass-panel px-4 py-2 text-white flex items-center gap-3 border-amber-400/40">
+                <span class="text-amber-400 text-lg">Skor:</span>
+                <span id="currentScore" class="text-2xl text-yellow-300 font-bold">0</span>
+            </div>
+            <div class="glass-panel px-4 py-2 text-white flex items-center gap-3 border-cyan-400/40">
+                <span id="stageBadge" class="bg-cyan-500 text-slate-900 text-xs px-2 py-1 rounded-md font-extrabold uppercase">Stage 1</span>
+                <span id="questionProgress" class="text-sm text-cyan-200">Misi: 0/10 Soal</span>
+            </div>
+        </div>
+
+        <button id="fullscreenBtn" class="interactive glass-panel px-4 py-2 text-white hover:bg-slate-800/80 flex items-center gap-2 rounded-xl text-sm border-white/20">
+            <svg id="fullscreenIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+            <span id="fullscreenText">Layar Penuh</span>
+        </button>
+    </div>
+
+    <!-- STREAMING_CHUNK:Building the Main Menu Interface... -->
+    <!-- Main Menu UI -->
+    <div id="mainMenu" class="ui-layer">
+        <div class="glass-panel p-6 text-center interactive max-w-md w-11/12 border-slate-700">
+            <h1 class="text-4xl md:text-5xl text-slate-100 font-extrabold tracking-wider mb-2 drop-shadow-md">
+                WORM ZONE
+            </h1>
+            <p class="text-cyan-400 text-sm mb-4 font-semibold tracking-wide">Petualangan English Vocabulary (10 Stage)</p>
+            
+            <div class="mb-5 bg-slate-900/70 p-4 rounded-xl border border-slate-700/80 text-left">
+                <!-- Control Selector -->
+                <p class="text-slate-300 mb-2 text-xs font-semibold uppercase tracking-wider">Metode Kontrol:</p>
+                <div class="flex justify-center gap-2 mb-4" id="controlPicker">
+                    <button class="px-4 py-2 bg-slate-800 text-slate-200 text-sm rounded-lg btn-choice border-2 border-cyan-400 font-bold" data-control="mouse">🖱️ Mouse / Touch</button>
+                    <button class="px-4 py-2 bg-slate-800 text-slate-200 text-sm rounded-lg btn-choice border-2 border-transparent font-bold" data-control="keyboard">⌨️ Keyboard</button>
+                </div>
+
+                <!-- STREAMING_CHUNK:Rendering Customization Options... -->
+                <p class="text-slate-300 mb-2 text-xs font-semibold uppercase tracking-wider">Warna Cacing:</p>
+                <div class="flex justify-center gap-3 mb-4" id="colorPicker">
+                    <button class="w-9 h-9 rounded-full btn-choice selected-ring border border-white/40" 
+                            style="background: linear-gradient(135deg, #ff0055, #ffaa00, #ffff00);" 
+                            data-pattern="fire" title="Api"></button>
+                    <button class="w-9 h-9 rounded-full btn-choice border border-white/40" 
+                            style="background: linear-gradient(135deg, #00d2ff, #7a00ff, #ff00c8);" 
+                            data-pattern="cyber" title="Cyber"></button>
+                    <button class="w-9 h-9 rounded-full btn-choice border border-white/40" 
+                            style="background: linear-gradient(135deg, #00ff66, #059669, #ffff00);" 
+                            data-pattern="monster" title="Monster"></button>
+                    <button class="w-9 h-9 rounded-full btn-choice border border-white/40" 
+                            style="background: linear-gradient(135deg, #ec4899, #8b5cf6, #3b82f6);" 
+                            data-pattern="candy" title="Permen"></button>
+                    <button class="w-9 h-9 rounded-full btn-choice border border-white/40" 
+                            style="background: linear-gradient(135deg, #0284c7, #06b6d4, #38bdf8);" 
+                            data-pattern="ocean" title="Samudra"></button>
+                </div>
+                
+                <p class="text-slate-300 mb-2 text-xs font-semibold uppercase tracking-wider">Ekspresi Wajah:</p>
+                <div class="flex justify-center gap-2 flex-wrap mb-4" id="facePicker">
+                    <button class="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg btn-choice border-2 border-cyan-400" data-face="normal">Normal</button>
+                    <button class="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg btn-choice border-2 border-transparent" data-face="angry">Marah</button>
+                    <button class="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg btn-choice border-2 border-transparent" data-face="cool">Keren</button>
+                    <button class="px-3 py-1 bg-slate-800 text-slate-200 text-xs rounded-lg btn-choice border-2 border-transparent" data-face="cute">Imut</button>
+                </div>
+
+                <div class="relative mt-2">
+                    <span class="text-xs text-slate-400 mb-1 block">Pratinjau:</span>
+                    <canvas id="previewCanvas" width="280" height="70" class="w-full bg-slate-950 rounded-lg border border-slate-800 shadow-inner"></canvas>
+                </div>
+            </div>
+
+            <button id="startBtn" class="btn-play bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-500 text-slate-950 font-black py-3.5 px-8 rounded-xl text-lg w-full shadow-lg tracking-wider">
+                MAIN SEKARANG
+            </button>
+        </div>
+    </div>
+
+    <!-- STREAMING_CHUNK:Creating the Quiz and Challenge Overlays... -->
+    <!-- Quiz Overlay UI -->
+    <div id="quizMenu" class="ui-layer hidden">
+        <div class="glass-panel p-6 text-center interactive max-w-md w-11/12 border-amber-400/50 pulse-glow">
+            <div class="inline-block bg-amber-500/20 text-amber-300 border border-amber-400/40 px-3 py-1 rounded-full text-xs mb-3 font-semibold tracking-wider">
+                <span id="quizStageNotice">SOAL STAGE 1 (Clothes)</span>
+            </div>
+            
+            <!-- Timer UI -->
+            <div class="w-full bg-slate-800 rounded-full h-2.5 mb-2 mt-1">
+                <div id="quizTimerBar" class="bg-rose-500 h-2.5 rounded-full transition-all duration-1000 ease-linear" style="width: 100%"></div>
+            </div>
+            <div id="quizTimerText" class="text-rose-400 text-xs font-bold mb-3 uppercase tracking-wider">Waktu: 10s</div>
+
+            <h2 id="quizTitle" class="text-2xl text-amber-300 mb-1 font-bold">SOAL TANTANGAN!</h2>
+            <p id="quizDesc" class="text-slate-300 text-xs mb-4">Jawab dengan benar untuk menambah poin misi stage ini!</p>
+            
+            <div class="bg-slate-900/90 p-5 rounded-xl mb-5 border border-slate-700">
+                <h3 id="questionText" class="text-3xl text-white font-black tracking-wide">What is the English word for "baju"?</h3>
+            </div>
+
+            <div id="answersContainer" class="grid grid-cols-2 gap-3">
+                <!-- Buttons inserted via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- STREAMING_CHUNK:Building the Celebration and Game Over Panels... -->
+    <!-- Stage Celebration Overlay -->
+    <div id="stageCelebrationMenu" class="ui-layer hidden">
+        <div class="glass-panel p-8 text-center interactive max-w-lg w-11/12 border-emerald-400/60 shadow-2xl">
+            <div class="text-5xl mb-3">🎉🏆✨</div>
+            <h2 class="text-3xl text-emerald-400 font-extrabold mb-1">STAGE SELESAI!</h2>
+            <p id="stageCompletedText" class="text-slate-200 text-base mb-4">Selamat! Kamu berhasil menjawab 10 soal di Stage 1!</p>
+            
+            <div class="bg-emerald-950/40 p-4 rounded-xl border border-emerald-500/30 mb-6 text-slate-300 text-sm">
+                <p>Siap untuk tantangan vocabulary yang lebih tinggi?</p>
+                <p id="nextStagePreview" class="text-emerald-300 font-bold mt-1 text-base">Berikutnya: Stage 2 (Clothes)</p>
+            </div>
+
+            <button id="nextStageBtn" class="btn-action bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black py-4 px-8 rounded-xl text-lg w-full border-2 border-emerald-200 shadow-xl tracking-wider">
+                LANJUT KE STAGE 2 ➔
+            </button>
+        </div>
+    </div>
+
+    <!-- All Stages Cleared Celebration -->
+    <div id="victoryMenu" class="ui-layer hidden">
+        <div class="glass-panel p-8 text-center interactive max-w-lg w-11/12 border-yellow-400/80 shadow-2xl">
+            <div class="text-6xl mb-3">👑🌟🥇</div>
+            <h1 class="text-4xl text-yellow-300 font-black mb-2">SELAMAT! CHAMPION!</h1>
+            <p class="text-slate-200 text-base mb-4">Kamu telah menuntaskan SEMUA 10 STAGE VOCABULARY!</p>
+            
+            <div class="bg-yellow-950/40 p-4 rounded-xl border border-yellow-500/40 mb-6 text-slate-300 text-sm">
+                <p class="text-xs text-yellow-200/80 uppercase">Total Skor Kamu:</p>
+                <p id="victoryScore" class="text-4xl text-yellow-400 font-extrabold mt-1">0</p>
+            </div>
+
+            <button id="victoryRestartBtn" class="btn-action bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 font-black py-4 px-8 rounded-xl text-lg w-full border-2 border-yellow-200 shadow-xl tracking-wider">
+                MAIN LAGI DARI AWAL
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over UI -->
+    <div id="gameOverMenu" class="ui-layer hidden">
+        <div class="glass-panel p-8 text-center interactive max-w-md w-11/12 border-rose-500/50">
+            <h1 class="text-4xl text-rose-500 mb-2 font-black">GAME OVER!</h1>
+            <p class="text-slate-300 text-sm mb-1">Skor Akhir Kamu:</p>
+            <p id="finalScore" class="text-5xl text-amber-400 font-extrabold mb-6">0</p>
+            <button id="restartBtn" class="btn-play bg-gradient-to-r from-rose-500 to-amber-500 text-white font-bold py-3.5 px-8 rounded-xl text-lg w-full shadow-lg">
+                ULANGI STAGE 1
+            </button>
+            <button id="restartAllBtn" class="btn-play hidden mt-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-6 rounded-xl text-sm w-full border border-slate-700">
+                ULANGI DARI STAGE 1
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        /* STREAMING_CHUNK:Initializing state variables and DOM references... */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewCtx = previewCanvas.getContext('2d');
+        
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const restartAllBtn = document.getElementById('restartAllBtn');
+        const victoryRestartBtn = document.getElementById('victoryRestartBtn');
+        const nextStageBtn = document.getElementById('nextStageBtn');
+        const mainMenu = document.getElementById('mainMenu');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const stageCelebrationMenu = document.getElementById('stageCelebrationMenu');
+        const victoryMenu = document.getElementById('victoryMenu');
+        const topHUD = document.getElementById('topHUD');
+        const currentScoreEl = document.getElementById('currentScore');
+        const finalScoreEl = document.getElementById('finalScore');
+        const victoryScoreEl = document.getElementById('victoryScore');
+        const stageBadge = document.getElementById('stageBadge');
+        const questionProgress = document.getElementById('questionProgress');
+
+        const quizMenu = document.getElementById('quizMenu');
+        const quizTitle = document.getElementById('quizTitle');
+        const quizDesc = document.getElementById('quizDesc');
+        const quizStageNotice = document.getElementById('quizStageNotice');
+        const questionText = document.getElementById('questionText');
+        const answersContainer = document.getElementById('answersContainer');
+        const quizTimerBar = document.getElementById('quizTimerBar');
+        const quizTimerText = document.getElementById('quizTimerText');
+
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const fullscreenText = document.getElementById('fullscreenText');
+
+        /* STREAMING_CHUNK:Configuring Tone.js audio generation... */
+        let isAudioInitialized = false;
+        let bgmSequence = null;
+        let sfxPoly, sfxSynth, fmSynth, buzzerSynth, bgmInstrument;
+
+        function initAudio() {
+            if (isAudioInitialized) return;
+            Tone.start();
+            Tone.Transport.start();
+            
+            sfxPoly = new Tone.PolySynth(Tone.Synth).toDestination();
+            sfxPoly.volume.value = -8;
+            
+            sfxSynth = new Tone.Synth().toDestination();
+            sfxSynth.volume.value = -5;
+
+            fmSynth = new Tone.FMSynth().toDestination();
+            fmSynth.volume.value = -5;
+
+            buzzerSynth = new Tone.Synth({ oscillator: { type: 'sawtooth' } }).toDestination();
+            buzzerSynth.volume.value = -8;
+
+            bgmInstrument = new Tone.FMSynth().toDestination();
+            bgmInstrument.volume.value = -12;
+            
+            isAudioInitialized = true;
+        }
+
+        /* STREAMING_CHUNK:Defining Sound Effects function... */
+        function playSFX(type) {
+            if (!isAudioInitialized) return;
+            const now = Tone.now();
+            switch (type) {
+                case 'crash': 
+                    buzzerSynth.triggerAttackRelease("C2", "8n", now);
+                    buzzerSynth.triggerAttackRelease("G1", "4n", now + 0.1);
+                    break;
+                case 'bot_crash': 
+                    sfxPoly.triggerAttackRelease(["C5", "E5", "G5"], "16n", now);
+                    break;
+                case 'eat_special': 
+                    sfxSynth.triggerAttackRelease("C5", "16n", now);
+                    sfxSynth.triggerAttackRelease("E5", "16n", now + 0.1);
+                    sfxSynth.triggerAttackRelease("G5", "8n", now + 0.2);
+                    break;
+                case 'quiz_correct': 
+                    fmSynth.triggerAttackRelease("C5", "8n", now);
+                    fmSynth.triggerAttackRelease("G5", "4n", now + 0.15);
+                    break;
+                case 'quiz_wrong': 
+                    buzzerSynth.triggerAttackRelease("Eb3", "8n", now);
+                    buzzerSynth.triggerAttackRelease("C3", "4n", now + 0.2);
+                    break;
+                case 'stage_clear': 
+                    sfxPoly.triggerAttackRelease(["C4", "E4", "G4"], "8n", now);
+                    sfxPoly.triggerAttackRelease(["F4", "A4", "C5"], "8n", now + 0.2);
+                    sfxPoly.triggerAttackRelease(["G4", "B4", "D5"], "8n", now + 0.4);
+                    sfxPoly.triggerAttackRelease(["C5", "E5", "G5", "C6"], "2n", now + 0.6);
+                    break;
+            }
+        }
+
+        /* STREAMING_CHUNK:Setting up Background Music sequences and handling... */
+        function playStageBGM(stage) {
+            if (!isAudioInitialized) return;
+            
+            if (bgmSequence) {
+                bgmSequence.stop();
+                bgmSequence.dispose();
+            }
+
+            let melody = [];
+            let speed = "8n";
+            
+            switch (stage) {
+                case 1: melody = ["C4", "E4", "G4", "E4"]; Tone.Transport.bpm.value = 100; bgmInstrument.set({ modulationIndex: 1, harmonicity: 1.0 }); break;
+                case 2: melody = ["F4", "A4", "C5", "A4"]; Tone.Transport.bpm.value = 105; bgmInstrument.set({ modulationIndex: 2, harmonicity: 1.1 }); break;
+                case 3: melody = ["G4", "B4", "D5", "B4"]; Tone.Transport.bpm.value = 110; bgmInstrument.set({ modulationIndex: 2.5, harmonicity: 1.2 }); break;
+                case 4: melody = ["A4", "C5", "E5", "C5"]; Tone.Transport.bpm.value = 115; bgmInstrument.set({ modulationIndex: 3, harmonicity: 1.3 }); break;
+                case 5: melody = ["D4", "F#4", "A4", "F#4"]; Tone.Transport.bpm.value = 120; bgmInstrument.set({ modulationIndex: 4, harmonicity: 1.4 }); break;
+                case 6: melody = ["E4", "G#4", "B4", "G#4"]; Tone.Transport.bpm.value = 125; bgmInstrument.set({ modulationIndex: 5, harmonicity: 1.5 }); break;
+                case 7: melody = ["F4", "A4", "C5", "E5"]; Tone.Transport.bpm.value = 130; bgmInstrument.set({ modulationIndex: 6, harmonicity: 1.6 }); break;
+                case 8: melody = ["G4", "Bb4", "D5", "Bb4"]; Tone.Transport.bpm.value = 135; bgmInstrument.set({ modulationIndex: 7, harmonicity: 1.7 }); break;
+                case 9: melody = ["A4", "C#5", "E5", "C#5"]; Tone.Transport.bpm.value = 140; bgmInstrument.set({ modulationIndex: 8, harmonicity: 1.8 }); break;
+                case 10: default: melody = ["C5", "Eb5", "G5", "Eb5", "C5", "G4"]; speed = "16n"; Tone.Transport.bpm.value = 145; bgmInstrument.set({ modulationIndex: 9, harmonicity: 2.0 }); break;
+            }
+
+            bgmSequence = new Tone.Sequence((time, note) => {
+                bgmInstrument.triggerAttackRelease(note, "16n", time);
+            }, melody, speed).start(0);
+            
+            // PASTIKAN Transport dinyalakan ulang di sini jika sebelumnya terjeda
+            Tone.Transport.start(); 
+        }
+
+        /* STREAMING_CHUNK:Refactoring BGM pause/resume logic to fix audio bug... */
+        function pauseBGM() {
+            // Kita jeda (pause) transport utamanya, bukan stop sequence, agar bisa dilanjutkan kembali dengan aman
+            if (isAudioInitialized) Tone.Transport.pause();
+        }
+
+        function resumeBGM() {
+            // Kita jalankan lagi (start) transportnya, sequence otomatis melanjutkan dari tempat terakhir
+            if (isAudioInitialized) Tone.Transport.start();
+        }
+
+        const WORLD_SIZE = 3000;
+        let gameState = 'MENU'; 
+        let camera = { x: 0, y: 0 };
+        let keys = {};
+        let isDashing = false;
+        
+        // Control Mode State (mouse or keyboard)
+        let controlMode = 'mouse';
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+
+        /* STREAMING_CHUNK:Defining color palettes and character styles... */
+        const COLOR_PATTERNS = {
+            fire: ['#ff0055', '#ffaa00', '#ffff00'],
+            cyber: ['#00d2ff', '#7a00ff', '#ff00c8'],
+            monster: ['#00ff66', '#059669', '#ffff00'],
+            candy: ['#ec4899', '#8b5cf6', '#3b82f6'],
+            ocean: ['#0284c7', '#06b6d4', '#38bdf8']
+        };
+
+        const BOT_PALETTES = [
+            ['#ef4444', '#f97316', '#eab308'],
+            ['#06b6d4', '#3b82f6', '#8b5cf6'],
+            ['#10b981', '#84cc16', '#eab308'],
+            ['#f43f5e', '#d946ef', '#8b5cf6'],
+            ['#0284c7', '#14b8a6', '#facc15']
+        ];
+
+        let playerPatternKey = 'fire';
+        let playerColors = COLOR_PATTERNS.fire;
+        let playerFace = 'normal';
+
+        let player;
+        let foods = [];
+        let specialQuestionFoods = [];
+        let bots = [];
+        const FOOD_COUNT = 450;
+        const BOT_COUNT = 8;
+        
+        const FOOD_COLORS = ['#ff5733', '#33ff57', '#3357ff', '#f3ff33', '#ff33f3', '#33fff3', '#ffffff'];
+        const FACE_TYPES = ['normal', 'angry', 'cool', 'cute'];
+
+        /* STREAMING_CHUNK:Handling UI Events and Resizing... */
+        let currentStage = 1;
+        let stageCorrectCount = 0;
+        const TARGET_QUESTIONS_PER_STAGE = 10;
+        let currentStageQuestions = [];
+        let selectedQuizIndex = 0;
+        let quizTimerInterval = null;
+        let quizTimeLeft = 10;
+
+        const STAGE_CONFIGS = {
+            1: { name: "Stage 1", desc: "Clothes" },
+            2: { name: "Stage 2", desc: "Clothes" },
+            3: { name: "Stage 3", desc: "Colors" },
+            4: { name: "Stage 4", desc: "Colors" },
+            5: { name: "Stage 5", desc: "Animals" },
+            6: { name: "Stage 6", desc: "Animals" },
+            7: { name: "Stage 7", desc: "Fruits" },
+            8: { name: "Stage 8", desc: "Fruits" },
+            9: { name: "Stage 9", desc: "Mixed Vocabulary" },
+            10: { name: "Stage 10", desc: "Mixed Vocabulary" }
+        };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if(gameState !== 'PLAYING') {
+                mouseX = canvas.width / 2;
+                mouseY = canvas.height / 2;
+            }
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch((err) => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+                fullscreenText.innerText = "Keluar Fullscreen";
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+                fullscreenText.innerText = "Layar Penuh";
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenText.innerText = "Layar Penuh";
+            } else {
+                fullscreenText.innerText = "Keluar Fullscreen";
+            }
+        });
+
+        /* STREAMING_CHUNK:Mapping input interactions (Mouse, Keyboard, Touch)... */
+        document.querySelectorAll('#controlPicker button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#controlPicker button').forEach(b => {
+                    b.classList.remove('border-cyan-400');
+                    b.classList.add('border-transparent');
+                });
+                e.currentTarget.classList.remove('border-transparent');
+                e.currentTarget.classList.add('border-cyan-400');
+                controlMode = e.currentTarget.getAttribute('data-control');
+            });
+        });
+
+        document.querySelectorAll('#colorPicker button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#colorPicker button').forEach(b => b.classList.remove('selected-ring'));
+                const target = e.currentTarget;
+                target.classList.add('selected-ring');
+                playerPatternKey = target.getAttribute('data-pattern');
+                playerColors = COLOR_PATTERNS[playerPatternKey] || COLOR_PATTERNS.fire;
+                drawPreview(); 
+            });
+        });
+
+        document.querySelectorAll('#facePicker button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#facePicker button').forEach(b => {
+                    b.classList.remove('border-cyan-400');
+                    b.classList.add('border-transparent');
+                });
+                e.target.classList.remove('border-transparent');
+                e.target.classList.add('border-cyan-400');
+                playerFace = e.target.getAttribute('data-face');
+                drawPreview(); 
+            });
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (controlMode === 'mouse') {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (gameState === 'PLAYING' && controlMode === 'mouse') {
+                isDashing = true;
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (controlMode === 'mouse') {
+                isDashing = false;
+            }
+        });
+
+        window.addEventListener('touchstart', (e) => {
+            if (gameState === 'PLAYING' && controlMode === 'mouse') {
+                mouseX = e.touches[0].clientX;
+                mouseY = e.touches[0].clientY;
+                isDashing = true;
+            }
+        }, {passive: false});
+
+        window.addEventListener('touchmove', (e) => {
+            if (gameState === 'PLAYING' && controlMode === 'mouse') {
+                mouseX = e.touches[0].clientX;
+                mouseY = e.touches[0].clientY;
+                e.preventDefault(); 
+            }
+        }, {passive: false});
+
+        window.addEventListener('touchend', (e) => {
+             if (controlMode === 'mouse') {
+                isDashing = false;
+             }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            keys[key] = true;
+
+            if (e.code === 'Space' && gameState === 'PLAYING') {
+                isDashing = true;
+            }
+
+            if (gameState === 'QUIZ') {
+                if (key === 'arrowright' || key === 'd') {
+                    selectedQuizIndex = (selectedQuizIndex + 1) % 4;
+                    updateQuizSelectionUI();
+                } else if (key === 'arrowleft' || key === 'a') {
+                    selectedQuizIndex = (selectedQuizIndex + 3) % 4;
+                    updateQuizSelectionUI();
+                } else if (key === 'arrowdown' || key === 's') {
+                    selectedQuizIndex = (selectedQuizIndex + 2) % 4;
+                    updateQuizSelectionUI();
+                } else if (key === 'arrowup' || key === 'w') {
+                    selectedQuizIndex = (selectedQuizIndex + 2) % 4;
+                    updateQuizSelectionUI();
+                } else if (e.code === 'Enter' || e.code === 'Space') {
+                    const btn = document.getElementById('quiz-btn-' + selectedQuizIndex);
+                    if (btn) btn.click();
+                    if (e.code === 'Space') e.preventDefault();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            keys[key] = false;
+            if (e.code === 'Space') {
+                isDashing = false;
+            }
+        });
+
+        /* STREAMING_CHUNK:Loading English vocabulary database for the Quiz system... */
+        const VOCABULARY_STAGES = [
+            [{q: "baju", a: "shirt"}, {q: "celana", a: "pants"}, {q: "rok", a: "skirt"}, {q: "gaun", a: "dress"}, {q: "topi", a: "hat"}, {q: "sepatu", a: "shoes"}, {q: "kaus kaki", a: "socks"}, {q: "jaket", a: "jacket"}, {q: "kemeja", a: "shirt"}, {q: "sabuk", a: "belt"}],
+            [{q: "jas", a: "suit"}, {q: "dasi", a: "tie"}, {q: "sweter", a: "sweater"}, {q: "mantel", a: "coat"}, {q: "sarung tangan", a: "gloves"}, {q: "syal", a: "scarf"}, {q: "sepatu bot", a: "boots"}, {q: "sandal", a: "sandals"}, {q: "celana pendek", a: "shorts"}, {q: "piyama", a: "pajamas"}],
+            [{q: "merah", a: "red"}, {q: "biru", a: "blue"}, {q: "kuning", a: "yellow"}, {q: "hijau", a: "green"}, {q: "hitam", a: "black"}, {q: "putih", a: "white"}, {q: "oranye", a: "orange"}, {q: "ungu", a: "purple"}, {q: "merah muda", a: "pink"}, {q: "cokelat", a: "brown"}],
+            [{q: "abu-abu", a: "gray"}, {q: "emas", a: "gold"}, {q: "perak", a: "silver"}, {q: "biru muda", a: "light blue"}, {q: "biru tua", a: "dark blue"}, {q: "hijau muda", a: "light green"}, {q: "hijau tua", a: "dark green"}, {q: "merah muda", a: "pink"}, {q: "krem", a: "beige"}, {q: "toska", a: "turquoise"}],
+            [{q: "kucing", a: "cat"}, {q: "anjing", a: "dog"}, {q: "sapi", a: "cow"}, {q: "kambing", a: "goat"}, {q: "kuda", a: "horse"}, {q: "ayam", a: "chicken"}, {q: "bebek", a: "duck"}, {q: "burung", a: "bird"}, {q: "ikan", a: "fish"}, {q: "kelinci", a: "rabbit"}],
+            [{q: "gajah", a: "elephant"}, {q: "singa", a: "lion"}, {q: "harimau", a: "tiger"}, {q: "monyet", a: "monkey"}, {q: "jerapah", a: "giraffe"}, {q: "zebra", a: "zebra"}, {q: "beruang", a: "bear"}, {q: "ular", a: "snake"}, {q: "buaya", a: "crocodile"}, {q: "katak", a: "frog"}],
+            [{q: "apel", a: "apple"}, {q: "pisang", a: "banana"}, {q: "mangga", a: "mango"}, {q: "jeruk", a: "orange"}, {q: "semangka", a: "watermelon"}, {q: "anggur", a: "grape"}, {q: "nanas", a: "pineapple"}, {q: "pepaya", a: "papaya"}, {q: "melon", a: "melon"}, {q: "stroberi", a: "strawberry"}],
+            [{q: "kelapa", a: "coconut"}, {q: "jambu", a: "guava"}, {q: "alpukat", a: "avocado"}, {q: "rambutan", a: "rambutan"}, {q: "durian", a: "durian"}, {q: "manggis", a: "mangosteen"}, {q: "salak", a: "snake fruit"}, {q: "lemon", a: "lemon"}, {q: "ceri", a: "cherry"}, {q: "kiwi", a: "kiwi"}],
+            [{q: "kaus kaki", a: "socks"}, {q: "ungu", a: "purple"}, {q: "gajah", a: "elephant"}, {q: "mangga", a: "mango"}, {q: "jaket", a: "jacket"}, {q: "hijau", a: "green"}, {q: "kelinci", a: "rabbit"}, {q: "stroberi", a: "strawberry"}, {q: "topi", a: "hat"}, {q: "biru", a: "blue"}],
+            [{q: "gaun", a: "dress"}, {q: "kuning", a: "yellow"}, {q: "singa", a: "lion"}, {q: "semangka", a: "watermelon"}, {q: "sepatu", a: "shoes"}, {q: "merah muda", a: "pink"}, {q: "monyet", a: "monkey"}, {q: "nanas", a: "pineapple"}, {q: "sabuk", a: "belt"}, {q: "cokelat", a: "brown"}],
+        ];
+
+        const ALL_VOCABULARY_ANSWERS = [];
+        VOCABULARY_STAGES.forEach(stage => stage.forEach(item => ALL_VOCABULARY_ANSWERS.push(item.a)));
+
+        /* STREAMING_CHUNK:Generating random vocabulary questions for the active stage... */
+        function generateStageQuestions(stageNum) {
+            let pool = [];
+            const stageIndex = Math.min(stageNum - 1, VOCABULARY_STAGES.length - 1);
+            const questionsForStage = VOCABULARY_STAGES[stageIndex];
+
+            questionsForStage.forEach(item => {
+                let wrongChoices = new Set();
+                while (wrongChoices.size < 3) {
+                    let randomWrong = ALL_VOCABULARY_ANSWERS[Math.floor(Math.random() * ALL_VOCABULARY_ANSWERS.length)];
+                    if (randomWrong !== item.a) {
+                        wrongChoices.add(randomWrong);
+                    }
+                }
+
+                let options = Array.from(wrongChoices);
+                let correctPos = Math.floor(Math.random() * 4);
+                options.splice(correctPos, 0, item.a);
+
+                pool.push({ q: `What is the English word for "${item.q}"?`, options: options, a: correctPos });
+            });
+
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+
+            return pool;
+        }
+
+        /* STREAMING_CHUNK:Rendering the character preview on the Main Menu... */
+        function drawPreview() {
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+            const centerX = previewCanvas.width / 2;
+            const centerY = previewCanvas.height / 2;
+            
+            let dummyHistory = [];
+            for(let i = 0; i < 8; i++) {
+                dummyHistory.push({ x: centerX - (i * 12) + 35, y: centerY + Math.sin(i * 0.5) * 6 });
+            }
+            
+            for (let i = dummyHistory.length - 1; i >= 0; i--) {
+                previewCtx.beginPath();
+                previewCtx.arc(dummyHistory[i].x, dummyHistory[i].y, 11, 0, Math.PI * 2);
+                
+                const colorIndex = Math.floor(i / 2) % playerColors.length;
+                previewCtx.fillStyle = playerColors[colorIndex];
+                previewCtx.fill();
+                previewCtx.lineWidth = 1;
+                previewCtx.strokeStyle = "rgba(0,0,0,0.3)";
+                previewCtx.stroke();
+            }
+
+            const headX = dummyHistory[0].x;
+            const headY = dummyHistory[0].y;
+            previewCtx.beginPath();
+            previewCtx.arc(headX, headY, 13, 0, Math.PI * 2);
+            previewCtx.fillStyle = playerColors[0];
+            previewCtx.fill();
+            previewCtx.lineWidth = 2;
+            previewCtx.strokeStyle = "rgba(0,0,0,0.4)";
+            previewCtx.stroke();
+
+            drawFace(previewCtx, headX, headY, 13, 0, playerFace);
+        }
+
+        /* STREAMING_CHUNK:Drawing dynamic facial expressions... */
+        function drawFace(context, x, y, radius, angle, faceType) {
+            const eyeOffset = radius * 0.5;
+            const eyeSize = radius * 0.4;
+            const pupilSize = eyeSize * 0.5;
+
+            context.save();
+            context.translate(x, y);
+            context.rotate(angle);
+
+            if (faceType === 'cool') {
+                context.fillStyle = "black";
+                context.beginPath();
+                context.arc(Math.cos(-0.6)*eyeOffset, Math.sin(-0.6)*eyeOffset, eyeSize * 1.2, 0, Math.PI*2);
+                context.arc(Math.cos(0.6)*eyeOffset, Math.sin(0.6)*eyeOffset, eyeSize * 1.2, 0, Math.PI*2);
+                context.fill();
+                context.fillRect(-2, -eyeSize, 4, eyeSize*2);
+            } else {
+                let currentEyeSize = faceType === 'cute' ? eyeSize * 1.3 : eyeSize;
+                context.fillStyle = "white";
+                context.beginPath(); 
+                context.arc(Math.cos(-0.6)*eyeOffset, Math.sin(-0.6)*eyeOffset, currentEyeSize, 0, Math.PI * 2); 
+                context.arc(Math.cos(0.6)*eyeOffset, Math.sin(0.6)*eyeOffset, currentEyeSize, 0, Math.PI * 2); 
+                context.fill();
+
+                context.fillStyle = "black";
+                let pupX = currentEyeSize - pupilSize;
+                context.beginPath(); 
+                context.arc(Math.cos(-0.6)*eyeOffset + pupX, Math.sin(-0.6)*eyeOffset, pupilSize, 0, Math.PI * 2); 
+                context.arc(Math.cos(0.6)*eyeOffset + pupX, Math.sin(0.6)*eyeOffset, pupilSize, 0, Math.PI * 2); 
+                context.fill();
+
+                if (faceType === 'angry') {
+                    context.strokeStyle = "black";
+                    context.lineWidth = 2.5;
+                    context.beginPath();
+                    context.moveTo(Math.cos(-0.6)*eyeOffset + currentEyeSize, Math.sin(-0.6)*eyeOffset - currentEyeSize);
+                    context.lineTo(Math.cos(-0.6)*eyeOffset - currentEyeSize, Math.sin(-0.6)*eyeOffset - 2);
+                    context.moveTo(Math.cos(0.6)*eyeOffset + currentEyeSize, Math.sin(0.6)*eyeOffset + currentEyeSize);
+                    context.lineTo(Math.cos(0.6)*eyeOffset - currentEyeSize, Math.sin(0.6)*eyeOffset + 2);
+                    context.stroke();
+                } else if (faceType === 'cute') {
+                    context.fillStyle = "rgba(255, 105, 180, 0.6)";
+                    context.beginPath();
+                    context.arc(Math.cos(-1.0)*eyeOffset, Math.sin(-1.0)*eyeOffset, eyeSize, 0, Math.PI*2);
+                    context.arc(Math.cos(1.0)*eyeOffset, Math.sin(1.0)*eyeOffset, eyeSize, 0, Math.PI*2);
+                    context.fill();
+                    
+                    context.fillStyle = "white";
+                    context.beginPath();
+                    context.arc(Math.cos(-0.6)*eyeOffset + pupX - 2, Math.sin(-0.6)*eyeOffset - 2, 2, 0, Math.PI * 2); 
+                    context.arc(Math.cos(0.6)*eyeOffset + pupX - 2, Math.sin(0.6)*eyeOffset - 2, 2, 0, Math.PI * 2); 
+                    context.fill();
+                }
+            }
+            context.restore();
+        }
+        drawPreview();
+
+        /* STREAMING_CHUNK:Defining the Worm Entity Class... */
+        class Worm {
+            constructor(x, y, isPlayer = false) {
+                this.x = x;
+                this.y = y;
+                this.isPlayer = isPlayer;
+                this.angle = Math.random() * Math.PI * 2;
+                this.targetAngle = this.angle;
+                
+                this.baseSpeed = isPlayer ? 4.0 : 2.8 + Math.random() * 1.0;
+                this.speed = this.baseSpeed;
+                this.radius = isPlayer ? 10 : 12 + Math.random() * 5; 
+                this.length = isPlayer ? 6 : 12 + Math.floor(Math.random() * 20); 
+                
+                if (isPlayer) {
+                    this.colors = playerColors;
+                } else {
+                    this.colors = BOT_PALETTES[Math.floor(Math.random() * BOT_PALETTES.length)];
+                }
+
+                this.faceType = isPlayer ? playerFace : FACE_TYPES[Math.floor(Math.random() * FACE_TYPES.length)];
+                
+                this.history = [];
+                this.historyGap = 4;
+                this.score = 0;
+                this.invincibleTimer = 0; 
+                this.changeDirTimer = 0;
+            }
+
+            /* STREAMING_CHUNK:Updating Worm positions based on controls... */
+            update(targetX, targetY) {
+                if (this.invincibleTimer > 0) this.invincibleTimer--;
+
+                this.history.unshift({ x: this.x, y: this.y });
+                if (this.history.length > this.length * this.historyGap) {
+                    this.history.pop();
+                }
+
+                if (this.isPlayer) {
+                    if (controlMode === 'keyboard') {
+                        let kx = 0;
+                        let ky = 0;
+                        if (keys['w'] || keys['arrowup']) ky -= 1;
+                        if (keys['s'] || keys['arrowdown']) ky += 1;
+                        if (keys['a'] || keys['arrowleft']) kx -= 1;
+                        if (keys['d'] || keys['arrowright']) kx += 1;
+
+                        if (kx !== 0 || ky !== 0) {
+                            this.targetAngle = Math.atan2(ky, kx);
+                        }
+                    } else if (controlMode === 'mouse') {
+                        let screenCenterX = canvas.width / 2;
+                        let screenCenterY = canvas.height / 2;
+                        
+                        let dx = mouseX - screenCenterX;
+                        let dy = mouseY - screenCenterY;
+                        
+                        if (Math.hypot(dx, dy) > 10) {
+                            this.targetAngle = Math.atan2(dy, dx);
+                        }
+                    }
+
+                    this.speed = isDashing ? this.baseSpeed * 2 : this.baseSpeed;
+                } else {
+                    this.updateSmartBotAI();
+                }
+
+                let diff = this.targetAngle - this.angle;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                this.angle += diff * 0.16;
+
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                if (this.x < 10) { this.x = 10; this.angle = Math.PI - this.angle; }
+                if (this.x > WORLD_SIZE - 10) { this.x = WORLD_SIZE - 10; this.angle = Math.PI - this.angle; }
+                if (this.y < 10) { this.y = 10; this.angle = -this.angle; }
+                if (this.y > WORLD_SIZE - 10) { this.y = WORLD_SIZE - 10; this.angle = -this.angle; }
+            }
+
+            /* STREAMING_CHUNK:Implementing Smart Bot AI navigation... */
+            updateSmartBotAI() {
+                let testAngles = [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8];
+                let bestAngle = this.targetAngle;
+                let highestSafety = -9999;
+                let threatAhead = false;
+
+                const lookaheadDist = 100 + this.radius * 2;
+
+                for (let aOffset of testAngles) {
+                    let testAngle = this.angle + aOffset;
+                    let rayX = this.x + Math.cos(testAngle) * lookaheadDist;
+                    let rayY = this.y + Math.sin(testAngle) * lookaheadDist;
+
+                    let safety = 1000;
+
+                    if (rayX < 150 || rayX > WORLD_SIZE - 150 || rayY < 150 || rayY > WORLD_SIZE - 150) {
+                        safety -= 1500;
+                    }
+
+                    if (player && player.history) {
+                        for (let p = 0; p < player.history.length; p += player.historyGap) {
+                            let part = player.history[p];
+                            if (!part) continue;
+                            let dist = Math.hypot(rayX - part.x, rayY - part.y);
+                            if (dist < player.radius + this.radius + 40) {
+                                safety -= (2000 - dist * 10);
+                            }
+                        }
+                    }
+
+                    for (let b of bots) {
+                        if (b === this) continue;
+                        for (let p = 0; p < b.history.length; p += b.historyGap) {
+                            let part = b.history[p];
+                            if (!part) continue;
+                            let dist = Math.hypot(rayX - part.x, rayY - part.y);
+                            if (dist < b.radius + this.radius + 35) {
+                                safety -= (1500 - dist * 10);
+                            }
+                        }
+                    }
+
+                    if (aOffset === 0 && safety < 500) {
+                        threatAhead = true;
+                    }
+
+                    if (safety > highestSafety) {
+                        highestSafety = safety;
+                        bestAngle = testAngle;
+                    }
+                }
+
+                if (threatAhead || highestSafety < 600) {
+                    this.targetAngle = bestAngle;
+                } else {
+                    let nearestFood = null;
+                    let minDist = 250; 
+
+                    for (let f of foods) {
+                        let d = Math.hypot(this.x - f.x, this.y - f.y);
+                        if (d < minDist) {
+                            minDist = d;
+                            nearestFood = f;
+                        }
+                    }
+
+                    if (nearestFood) {
+                        this.targetAngle = Math.atan2(nearestFood.y - this.y, nearestFood.x - this.x);
+                    } else {
+                        this.changeDirTimer--;
+                        if (this.changeDirTimer <= 0) {
+                            this.targetAngle += (Math.random() - 0.5) * 1.5; 
+                            this.changeDirTimer = 40 + Math.random() * 60;
+                        }
+                    }
+                }
+            }
+
+            /* STREAMING_CHUNK:Rendering worms on the main canvas... */
+            draw(ctx) {
+                if (this.isPlayer && this.invincibleTimer > 0) {
+                    ctx.globalAlpha = (Math.floor(Date.now() / 100) % 2 === 0) ? 0.4 : 1;
+                }
+
+                for (let i = this.history.length - 1; i >= 0; i -= this.historyGap) {
+                    const pos = this.history[i];
+                    if (!pos) continue;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, this.radius * 0.9, 0, Math.PI * 2);
+
+                    const colorIdx = Math.floor((i / this.historyGap) / 2) % this.colors.length;
+                    ctx.fillStyle = this.colors[colorIdx];
+                    ctx.fill();
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+                    ctx.stroke();
+                }
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.colors[0];
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "rgba(0,0,0,0.3)";
+                ctx.stroke();
+
+                drawFace(ctx, this.x, this.y, this.radius, this.angle, this.faceType);
+
+                ctx.globalAlpha = 1;
+                
+                if (this.isPlayer) {
+                    ctx.fillStyle = "#38bdf8";
+                    ctx.font = "bold 13px 'Fredoka One', sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.fillText("Kamu", this.x, this.y - this.radius - 12);
+                }
+            }
+        }
+
+        /* STREAMING_CHUNK:Defining the Food Entity System... */
+        class Food {
+            constructor(x = null, y = null, size = null, isSpecial = false) {
+                this.x = x !== null ? x : Math.random() * WORLD_SIZE;
+                this.y = y !== null ? y : Math.random() * WORLD_SIZE;
+                this.size = size !== null ? size : 4 + Math.random() * 5;
+                this.isSpecial = isSpecial;
+                this.color = isSpecial ? '#facc15' : FOOD_COLORS[Math.floor(Math.random() * FOOD_COLORS.length)];
+                this.val = isSpecial ? 50 : Math.floor(this.size * 2);
+                this.pulse = 0;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                
+                if (this.isSpecial) {
+                    this.pulse += 0.08;
+                    let glowSize = this.size + Math.sin(this.pulse) * 3;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#facc15';
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.font = `bold ${Math.floor(this.size * 1.2)}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('?', this.x, this.y);
+                } else {
+                    ctx.fill();
+                }
+            }
+        }
+
+        function spawnSpecialFood() {
+            if (specialQuestionFoods.length < 5) {
+                specialQuestionFoods.push(new Food(null, null, 12, true));
+            }
+        }
+
+        /* STREAMING_CHUNK:Controlling the Quiz Interface Overlay... */
+        function triggerQuiz() {
+            pauseBGM();
+            gameState = 'QUIZ';
+            selectedQuizIndex = 0;
+            keys = {};
+            isDashing = false;
+            if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                document.activeElement.blur();
+            }
+            
+            if (currentStageQuestions.length === 0) {
+                currentStageQuestions = generateStageQuestions(currentStage);
+            }
+
+            const qData = currentStageQuestions[0];
+            
+            quizStageNotice.innerText = `${STAGE_CONFIGS[currentStage].name.toUpperCase()} (${STAGE_CONFIGS[currentStage].desc})`;
+
+            quizTitle.innerText = "ENGLISH VOCABULARY QUIZ!";
+            quizTitle.className = "text-2xl text-amber-300 font-bold mb-1";
+            quizDesc.innerText = "Choose the correct English word!";
+
+            questionText.innerText = qData.q;
+            answersContainer.innerHTML = ''; 
+
+            qData.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.id = 'quiz-btn-' + index;
+                btn.className = "btn-quiz bg-slate-800 hover:bg-slate-700 text-cyan-300 font-bold py-3 px-4 rounded-xl border border-slate-600 text-lg transition-all duration-200";
+                btn.innerText = opt;
+                btn.onclick = () => handleQuizAnswer(index === qData.a);
+                answersContainer.appendChild(btn);
+            });
+
+            quizTimeLeft = 10;
+            quizTimerText.innerText = `WAKTU: ${quizTimeLeft}s`;
+            quizTimerBar.style.width = '100%';
+            
+            if (quizTimerInterval) clearInterval(quizTimerInterval);
+            quizTimerInterval = setInterval(() => {
+                quizTimeLeft--;
+                quizTimerText.innerText = `WAKTU: ${quizTimeLeft}s`;
+                quizTimerBar.style.width = `${(quizTimeLeft / 10) * 100}%`;
+                
+                if (quizTimeLeft <= 0) {
+                    clearInterval(quizTimerInterval);
+                    handleQuizTimeout();
+                }
+            }, 1000);
+
+            quizMenu.classList.remove('hidden');
+            updateQuizSelectionUI();
+        }
+
+        function updateQuizSelectionUI() {
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById('quiz-btn-' + i);
+                if (btn) {
+                    if (i === selectedQuizIndex) {
+                        btn.classList.add('ring-4', 'ring-amber-400', 'bg-slate-700', 'scale-105');
+                    } else {
+                        btn.classList.remove('ring-4', 'ring-amber-400', 'bg-slate-700', 'scale-105');
+                    }
+                }
+            }
+        }
+
+        /* STREAMING_CHUNK:Handling Quiz Results and Timers... */
+        function handleQuizTimeout() {
+            quizMenu.classList.add('hidden');
+            keys = {};
+            isDashing = false;
+            
+            const failedQuestion = currentStageQuestions.shift();
+            currentStageQuestions.push(failedQuestion);
+
+            playSFX('quiz_wrong'); 
+            
+            resumeBGM();
+            gameState = 'PLAYING';
+            mouseX = canvas.width / 2;
+            mouseY = canvas.height / 2;
+        }
+
+        function handleQuizAnswer(isCorrect) {
+            if (quizTimerInterval) clearInterval(quizTimerInterval);
+            
+            quizMenu.classList.add('hidden');
+            keys = {};
+            isDashing = false;
+            
+            const answeredQuestion = currentStageQuestions.shift();
+
+            if (isCorrect) {
+                playSFX('quiz_correct');
+                stageCorrectCount++;
+                updateScore(200 * currentStage);
+                updateHUD();
+
+                player.length += 5;
+
+                if (stageCorrectCount >= TARGET_QUESTIONS_PER_STAGE) {
+                    triggerStageCelebration();
+                    return;
+                }
+            } else {
+                playSFX('quiz_wrong');
+                currentStageQuestions.push(answeredQuestion);
+            }
+
+            resumeBGM();
+            gameState = 'PLAYING';
+            mouseX = canvas.width / 2;
+            mouseY = canvas.height / 2;
+        }
+
+        /* STREAMING_CHUNK:Managing Game Stages and Celebrations... */
+        function triggerStageCelebration() {
+            pauseBGM();
+            playSFX('stage_clear');
+            gameState = 'CELEBRATION';
+            
+            confetti({
+                particleCount: 120,
+                spread: 80,
+                origin: { y: 0.6 }
+            });
+
+            if (currentStage >= 10) {
+                victoryScoreEl.innerText = player.score;
+                victoryMenu.classList.remove('hidden');
+            } else {
+                document.getElementById('stageCompletedText').innerText = `Selamat! Kamu berhasil menjawab 10 soal di ${STAGE_CONFIGS[currentStage].name}!`;
+                document.getElementById('nextStagePreview').innerText = `Berikutnya: ${STAGE_CONFIGS[currentStage + 1].name} (${STAGE_CONFIGS[currentStage + 1].desc})`;
+                document.getElementById('nextStageBtn').innerText = `LANJUT KE STAGE ${currentStage + 1} ➔`;
+                stageCelebrationMenu.classList.remove('hidden');
+            }
+        }
+
+        let stageStartScore = 0;
+
+        function advanceToNextStage() {
+            currentStage++;
+            stageCorrectCount = 0;
+            stageStartScore = player ? player.score : 0;
+            currentStageQuestions = generateStageQuestions(currentStage);
+            
+            stageCelebrationMenu.classList.add('hidden');
+            updateHUD();
+            gameState = 'PLAYING';
+            playStageBGM(currentStage);
+            mouseX = canvas.width / 2;
+            mouseY = canvas.height / 2;
+        }
+
+        /* STREAMING_CHUNK:Initializing main game properties... */
+        function initGame(stageToStart = 1) {
+            initAudio();
+            currentStage = stageToStart;
+            stageCorrectCount = 0;
+            currentStageQuestions = generateStageQuestions(currentStage);
+
+            player = new Worm(WORLD_SIZE / 2, WORLD_SIZE / 2, true);
+            if (stageToStart === 1) {
+                stageStartScore = 0;
+            }
+            player.score = stageStartScore;
+            
+            foods = [];
+            for (let i = 0; i < FOOD_COUNT; i++) foods.push(new Food());
+
+            specialQuestionFoods = [];
+            for (let i = 0; i < 4; i++) spawnSpecialFood();
+
+            bots = [];
+            for (let i = 0; i < BOT_COUNT; i++) bots.push(new Worm(Math.random() * WORLD_SIZE, Math.random() * WORLD_SIZE, false));
+
+            mouseX = canvas.width / 2;
+            mouseY = canvas.height / 2;
+            isDashing = false;
+            keys = {};
+
+            gameState = 'PLAYING';
+            mainMenu.classList.add('hidden');
+            gameOverMenu.classList.add('hidden');
+            quizMenu.classList.add('hidden');
+            stageCelebrationMenu.classList.add('hidden');
+            victoryMenu.classList.add('hidden');
+            topHUD.classList.remove('hidden');
+
+            updateScore(0);
+            updateHUD();
+            
+            playStageBGM(currentStage);
+        }
+
+        function updateScore(scoreToAdd) {
+            player.score += scoreToAdd;
+            currentScoreEl.innerText = player.score;
+        }
+
+        function updateHUD() {
+            stageBadge.innerText = STAGE_CONFIGS[currentStage].name;
+            questionProgress.innerText = `Misi Stage: ${stageCorrectCount}/10 Soal`;
+        }
+
+        /* STREAMING_CHUNK:Handling Game Over and Bot Deletions... */
+        function gameOver() {
+            pauseBGM();
+            playSFX('crash');
+            gameState = 'GAMEOVER';
+            topHUD.classList.add('hidden');
+            finalScoreEl.innerText = player.score;
+            restartBtn.innerText = `ULANGI STAGE ${currentStage}`;
+            if (currentStage > 1) {
+                restartAllBtn.classList.remove('hidden');
+            } else {
+                restartAllBtn.classList.add('hidden');
+            }
+            gameOverMenu.classList.remove('hidden');
+        }
+
+        function killBot(botToKill) {
+            for (let i = 0; i < botToKill.history.length; i += botToKill.historyGap) {
+                let pos = botToKill.history[i];
+                if (!pos) continue;
+                let f = new Food(pos.x + (Math.random() * 20 - 10), pos.y + (Math.random() * 20 - 10), 6 + Math.random() * 6);
+                f.val = Math.floor(f.size * 4);
+                if(foods.length > FOOD_COUNT + 100) foods.shift(); 
+                foods.push(f);
+            }
+            const idx = bots.indexOf(botToKill);
+            if (idx > -1) {
+                bots.splice(idx, 1);
+                bots.push(new Worm(Math.random() * WORLD_SIZE, Math.random() * WORLD_SIZE, false));
+            }
+        }
+
+        function drawGrid() {
+            const gridSize = 100;
+            const startX = Math.floor(camera.x / gridSize) * gridSize;
+            const startY = Math.floor(camera.y / gridSize) * gridSize;
+            
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            for (let x = startX; x < camera.x + canvas.width + gridSize; x += gridSize) {
+                ctx.moveTo(x, camera.y);
+                ctx.lineTo(x, camera.y + canvas.height);
+            }
+            for (let y = startY; y < camera.y + canvas.height + gridSize; y += gridSize) {
+                ctx.moveTo(camera.x, y);
+                ctx.lineTo(camera.x + canvas.width, y);
+            }
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(239, 68, 68, 0.3)";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+        }
+
+        /* STREAMING_CHUNK:Rendering the main Game Loop... */
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState === 'MENU' || gameState === 'GAMEOVER' || gameState === 'CELEBRATION') return;
+
+            if (gameState === 'PLAYING') {
+                player.update(0, 0);
+                
+                camera.x = player.x - canvas.width / 2;
+                camera.y = player.y - canvas.height / 2;
+
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    let f = foods[i];
+                    let dx = player.x - f.x;
+                    let dy = player.y - f.y;
+                    if (Math.hypot(dx, dy) < player.radius + f.size) {
+                        foods.splice(i, 1);
+                        foods.push(new Food()); 
+                        player.length += 0.4; 
+                        player.radius = Math.min(28, player.radius + 0.05); 
+                        updateScore(f.val);
+                    }
+                }
+
+                for (let i = specialQuestionFoods.length - 1; i >= 0; i--) {
+                    let sf = specialQuestionFoods[i];
+                    let dx = player.x - sf.x;
+                    let dy = player.y - sf.y;
+                    if (Math.hypot(dx, dy) < player.radius + sf.size + 4) {
+                        playSFX('eat_special');
+                        specialQuestionFoods.splice(i, 1);
+                        setTimeout(spawnSpecialFood, 5000);
+                        triggerQuiz();
+                        break;
+                    }
+                }
+
+                bots.forEach(bot => {
+                    bot.update(0, 0);
+                    for (let i = foods.length - 1; i >= 0; i--) {
+                        let f = foods[i];
+                        let dx = bot.x - f.x;
+                        let dy = bot.y - f.y;
+                        if (Math.hypot(dx, dy) < bot.radius + f.size) {
+                            foods.splice(i, 1);
+                            foods.push(new Food());
+                            bot.length += 0.4;
+                            bot.radius = Math.min(28, bot.radius + 0.05);
+                        }
+                    }
+                });
+
+                let playerCrashed = false;
+                let botCrashedIntoPlayer = null;
+
+                if (player.invincibleTimer <= 0) {
+                    for(let b = 0; b < bots.length; b++) {
+                        let bot = bots[b];
+                        for (let i = 0; i < bot.history.length; i += bot.historyGap) {
+                            let part = bot.history[i];
+                            if(!part) continue;
+                            let dx = player.x - part.x;
+                            let dy = player.y - part.y;
+                            if (Math.hypot(dx, dy) < player.radius + bot.radius * 0.8) {
+                                playerCrashed = true; break;
+                            }
+                        }
+                        if(playerCrashed) break;
+                    }
+                }
+
+                if (!playerCrashed) {
+                    for(let b = 0; b < bots.length; b++) {
+                        let bot = bots[b];
+                        for (let i = 0; i < player.history.length; i += player.historyGap) {
+                            let part = player.history[i];
+                            if(!part) continue;
+                            let dx = bot.x - part.x;
+                            let dy = bot.y - part.y;
+                            if (Math.hypot(dx, dy) < bot.radius + player.radius * 0.8) {
+                                botCrashedIntoPlayer = bot; break;
+                            }
+                        }
+                        if(botCrashedIntoPlayer) break;
+                    }
+                }
+
+                if (playerCrashed) {
+                    gameOver(); 
+                } else if (botCrashedIntoPlayer) {
+                    playSFX('bot_crash');
+                    player.length += 18; 
+                    player.radius = Math.min(30, player.radius + 1.5); 
+                    updateScore(300);
+                    killBot(botCrashedIntoPlayer);
+                } else {
+                    for (let b = bots.length - 1; b >= 0; b--) {
+                        let bot1 = bots[b];
+                        let bot1Died = false;
+                        for (let otherB = 0; otherB < bots.length; otherB++) {
+                            if (b === otherB) continue;
+                            let bot2 = bots[otherB];
+                            for (let i = 0; i < bot2.history.length; i += bot2.historyGap) {
+                                let part = bot2.history[i];
+                                if (!part) continue;
+                                let dx = bot1.x - part.x;
+                                let dy = bot1.y - part.y;
+                                if (Math.hypot(dx, dy) < bot1.radius + bot2.radius * 0.8) {
+                                    bot1Died = true; break;
+                                }
+                            }
+                            if (bot1Died) break;
+                        }
+                        if (bot1Died) { killBot(bot1); }
+                    }
+                }
+            } 
+
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+            drawGrid();
+
+            foods.forEach(f => f.draw(ctx));
+            specialQuestionFoods.forEach(sf => sf.draw(ctx));
+            bots.forEach(bot => bot.draw(ctx));
+            player.draw(ctx);
+            
+            ctx.restore();
+            
+            /* STREAMING_CHUNK:Drawing the Mini-map radar overlay... */
+            ctx.fillStyle = "rgba(15,23,42,0.8)";
+            ctx.fillRect(canvas.width - 110, canvas.height - 110, 95, 95);
+            ctx.strokeStyle = "rgba(255,255,255,0.15)";
+            ctx.strokeRect(canvas.width - 110, canvas.height - 110, 95, 95);
+            
+            ctx.fillStyle = "#facc15"; 
+            specialQuestionFoods.forEach(sf => {
+                let sMapX = (sf.x / WORLD_SIZE) * 95;
+                let sMapY = (sf.y / WORLD_SIZE) * 95;
+                ctx.beginPath();
+                ctx.arc(canvas.width - 110 + sMapX, canvas.height - 110 + sMapY, 2.5, 0, Math.PI*2);
+                ctx.fill();
+            });
+            
+            ctx.fillStyle = player.colors[0];
+            let mapX = (player.x / WORLD_SIZE) * 95;
+            let mapY = (player.y / WORLD_SIZE) * 95;
+            ctx.beginPath();
+            ctx.arc(canvas.width - 110 + mapX, canvas.height - 110 + mapY, 3, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        /* STREAMING_CHUNK:Attaching core event listeners and starting animation... */
+        startBtn.addEventListener('click', () => initGame(1));
+        restartBtn.addEventListener('click', () => initGame(currentStage));
+        restartAllBtn.addEventListener('click', () => initGame(1));
+        victoryRestartBtn.addEventListener('click', () => initGame(1));
+        nextStageBtn.addEventListener('click', advanceToNextStage);
+
+        window.onload = function() {
+            animate();
+        };
+    </script>
+</body>
+</html>
+```eof
