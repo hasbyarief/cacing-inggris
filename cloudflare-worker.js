@@ -104,7 +104,7 @@ export default {
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 
     // Fine-grained PATs contain no whitespace; remove accidental copy/paste whitespace.
-    const githubToken = String(env.GITHUB_TOKEN || "").replace(/\\s+/g, "");
+    const githubToken = String(env.GITHUB_TOKEN || "").replace(/\s+/g, "");
     const headers = {
       "authorization": `Bearer ${githubToken}`,
       "accept": "application/vnd.github+json",
