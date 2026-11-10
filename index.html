@@ -1485,7 +1485,7 @@
                 });
                 const result = await response.json();
                 if (!response.ok || !result.ok) {
-                    throw new Error(result.message || 'Skor gagal dikirim.');
+                    throw new Error((result.message || 'Skor gagal dikirim.') + (result.detail ? ' Detail: ' + result.detail : ''));
                 }
                 alert('🏆 ' + result.message + '\\nSkor: ' + scoreValue + ' poin');
             } catch (error) {
