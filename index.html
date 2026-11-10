@@ -178,6 +178,12 @@
                 </div>
             </div>
 
+            <div class="mb-3 text-left">
+                <label for="playerNameInput" class="block text-slate-300 text-xs font-bold uppercase tracking-wider mb-2">Nama Pemain</label>
+                <input id="playerNameInput" type="text" maxlength="24" autocomplete="nickname" placeholder="Masukkan nama kamu..." class="w-full bg-slate-950/80 text-white placeholder-slate-500 border border-cyan-400/40 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 rounded-xl px-4 py-3 text-base">
+                <p class="text-slate-500 text-[11px] mt-1">Nama ini akan ditampilkan di papan skor online (maks. 24 karakter).</p>
+            </div>
+
             <button id="startBtn" class="btn-play bg-gradient-to-r from-amber-500 via-emerald-500 to-cyan-500 text-slate-950 font-black py-3.5 px-8 rounded-xl text-lg w-full shadow-lg tracking-wider">
                 MAIN SEKARANG
             </button>
@@ -1425,7 +1431,17 @@
         }
 
         /* STREAMING_CHUNK:Attaching core event listeners and starting animation... */
-        startBtn.addEventListener('click', () => initGame(1));
+        startBtn.addEventListener('click', () => {
+            const playerName = playerNameInput.value.trim();
+            if (!playerName) {
+                alert('Masukkan nama pemain sebelum mulai bermain.');
+                playerNameInput.focus();
+                return;
+            }
+            playerNameInput.value = playerName.slice(0, 24);
+            localStorage.setItem('cacingInggrisPlayerName', playerNameInput.value);
+            initGame(1);
+        });
         restartBtn.addEventListener('click', () => initGame(currentStage));
         restartAllBtn.addEventListener('click', () => initGame(1));
         victoryRestartBtn.addEventListener('click', () => initGame(1));
@@ -1438,10 +1454,20 @@
         const LEADERBOARD_URL = 'https://raw.githubusercontent.com/hasbyarief/cacing-inggris/main/leaderboard.json';
         const SCORE_ISSUE_URL = 'https://github.com/hasbyarief/cacing-inggris/issues/new';
 
+        const playerNameInput = document.getElementById('playerNameInput');
+        playerNameInput.value = localStorage.getItem('cacingInggrisPlayerName') || '';
+        playerNameInput.addEventListener('input', () => {
+            localStorage.setItem('cacingInggrisPlayerName', playerNameInput.value.trim().slice(0, 24));
+        });
+
         function submitScoreToOnlineBoard(stageValue) {
-            const playerName = prompt('Masukkan nama untuk papan skor (maksimal 24 karakter):');
-            if (!playerName || !playerName.trim()) return;
-            const safeName = playerName.trim().replace(/[<>\r\n]/g, '').slice(0, 24);
+            const playerName = playerNameInput.value.trim();
+            if (!playerName) {
+                alert('Isi nama pemain terlebih dahulu di menu awal.');
+                playerNameInput.focus();
+                return;
+            }
+            const safeName = playerName.replace(/[<>\r\n]/g, '').slice(0, 24);
             if (!safeName) return;
             const scoreValue = Math.max(0, Math.floor(Number(player.score) || 0));
             const title = '[CAW-LEADERBOARD] ' + safeName + ' - ' + scoreValue;
