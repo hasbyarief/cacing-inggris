@@ -1447,12 +1447,12 @@
         victoryRestartBtn.addEventListener('click', () => initGame(1));
         nextStageBtn.addEventListener('click', advanceToNextStage);
 
-        // Leaderboard disimpan pada repository GitHub melalui GitHub Issues + Actions.
+        // Leaderboard: data tetap tersimpan di GitHub, pengiriman melalui Cloudflare Worker.
         const leaderboardBtn = document.getElementById('leaderboardBtn');
         const submitGameOverScoreBtn = document.getElementById('submitGameOverScoreBtn');
         const submitVictoryScoreBtn = document.getElementById('submitVictoryScoreBtn');
         const LEADERBOARD_URL = 'https://raw.githubusercontent.com/hasbyarief/cacing-inggris/main/leaderboard.json';
-        const SCORE_ISSUE_URL = 'https://github.com/hasbyarief/cacing-inggris/issues/new';
+        const SCORE_API_URL = 'https://cacing-inggris.hasbyarief.workers.dev/submit';
 
         const playerNameInput = document.getElementById('playerNameInput');
         playerNameInput.value = localStorage.getItem('cacingInggrisPlayerName') || '';
@@ -1460,20 +1460,40 @@
             localStorage.setItem('cacingInggrisPlayerName', playerNameInput.value.trim().slice(0, 24));
         });
 
-        function submitScoreToOnlineBoard(stageValue) {
+        async function submitScoreToOnlineBoard(stageValue) {
             const playerName = playerNameInput.value.trim();
             if (!playerName) {
                 alert('Isi nama pemain terlebih dahulu di menu awal.');
                 playerNameInput.focus();
                 return;
             }
-            const safeName = playerName.replace(/[<>\r\n]/g, '').slice(0, 24);
+            const safeName = playerName.replace(/[<>\\r\\n]/g, '').slice(0, 24);
             if (!safeName) return;
+
             const scoreValue = Math.max(0, Math.floor(Number(player.score) || 0));
-            const title = '[CAW-LEADERBOARD] ' + safeName + ' - ' + scoreValue;
-            const body = ['PLAYER_NAME: ' + safeName, 'SCORE: ' + scoreValue, 'STAGE: ' + stageValue, '', 'Dikirim dari permainan Cacing Inggris.'].join('\n');
-            const url = SCORE_ISSUE_URL + '?title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
-            window.open(url, '_blank', 'noopener');
+            const buttons = [submitGameOverScoreBtn, submitVictoryScoreBtn];
+            buttons.forEach(button => button.disabled = true);
+            const clickedButton = stageValue === 10 ? submitVictoryScoreBtn : submitGameOverScoreBtn;
+            const originalText = clickedButton.innerText;
+            clickedButton.innerText = 'MENGIRIM SKOR...';
+
+            try {
+                const response = await fetch(SCORE_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ player: safeName, score: scoreValue, stage: stageValue })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.ok) {
+                    throw new Error(result.message || 'Skor gagal dikirim.');
+                }
+                alert('🏆 ' + result.message + '\\nSkor: ' + scoreValue + ' poin');
+            } catch (error) {
+                alert('Skor belum berhasil dikirim. ' + (error.message || 'Periksa koneksi internet lalu coba lagi.'));
+            } finally {
+                buttons.forEach(button => button.disabled = false);
+                clickedButton.innerText = originalText;
+            }
         }
 
         async function showOnlineLeaderboard() {
@@ -1485,7 +1505,7 @@
                 const data = await response.json();
                 const scores = Array.isArray(data.scores) ? data.scores.slice(0, 10) : [];
                 if (!scores.length) alert('Papan skor masih kosong. Jadilah pemain pertama!');
-                else alert('🏆 10 PEMAIN TERBAIK\n\n' + scores.map((item, index) => (index + 1) + '. ' + item.player + ' — ' + item.score + ' poin (Stage ' + item.stage + ')').join('\n'));
+                else alert('🏆 10 PEMAIN TERBAIK\\n\\n' + scores.map((item, index) => (index + 1) + '. ' + item.player + ' — ' + item.score + ' poin (Stage ' + item.stage + ')').join('\\n'));
             } catch (error) {
                 alert('Belum dapat memuat papan skor. Coba lagi beberapa saat.');
             } finally {
