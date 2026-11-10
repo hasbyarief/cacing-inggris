@@ -1441,11 +1441,11 @@
         function submitScoreToOnlineBoard(stageValue) {
             const playerName = prompt('Masukkan nama untuk papan skor (maksimal 24 karakter):');
             if (!playerName || !playerName.trim()) return;
-            const safeName = playerName.trim().replace(/[<>\\r\\n]/g, '').slice(0, 24);
+            const safeName = playerName.trim().replace(/[<>\r\n]/g, '').slice(0, 24);
             if (!safeName) return;
             const scoreValue = Math.max(0, Math.floor(Number(player.score) || 0));
             const title = '[CAW-LEADERBOARD] ' + safeName + ' - ' + scoreValue;
-            const body = ['PLAYER_NAME: ' + safeName, 'SCORE: ' + scoreValue, 'STAGE: ' + stageValue, '', 'Dikirim dari permainan Cacing Inggris.'].join('\\n');
+            const body = ['PLAYER_NAME: ' + safeName, 'SCORE: ' + scoreValue, 'STAGE: ' + stageValue, '', 'Dikirim dari permainan Cacing Inggris.'].join('\n');
             const url = SCORE_ISSUE_URL + '?title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
             window.open(url, '_blank', 'noopener');
         }
@@ -1459,7 +1459,7 @@
                 const data = await response.json();
                 const scores = Array.isArray(data.scores) ? data.scores.slice(0, 10) : [];
                 if (!scores.length) alert('Papan skor masih kosong. Jadilah pemain pertama!');
-                else alert('🏆 10 PEMAIN TERBAIK\\n\\n' + scores.map((item, index) => (index + 1) + '. ' + item.player + ' — ' + item.score + ' poin (Stage ' + item.stage + ')').join('\\n'));
+                else alert('🏆 10 PEMAIN TERBAIK\n\n' + scores.map((item, index) => (index + 1) + '. ' + item.player + ' — ' + item.score + ' poin (Stage ' + item.stage + ')').join('\n'));
             } catch (error) {
                 alert('Belum dapat memuat papan skor. Coba lagi beberapa saat.');
             } finally {
