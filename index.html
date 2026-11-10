@@ -1497,20 +1497,103 @@
         }
 
         async function showOnlineLeaderboard() {
+            const originalText = leaderboardBtn.innerText;
             leaderboardBtn.disabled = true;
             leaderboardBtn.innerText = 'MEMUAT PAPAN SKOR...';
+
+            let overlay;
+            const closeModal = () => {
+                if (overlay) overlay.remove();
+                document.removeEventListener('keydown', handleEscape);
+            };
+            const handleEscape = (event) => {
+                if (event.key === 'Escape') closeModal();
+            };
+
             try {
                 const response = await fetch(LEADERBOARD_URL + '?t=' + Date.now());
-                if (!response.ok) throw new Error('Gagal memuat data');
+                if (!response.ok) throw new Error('Gagal memuat data papan skor.');
                 const data = await response.json();
                 const scores = Array.isArray(data.scores) ? data.scores.slice(0, 10) : [];
-                if (!scores.length) alert('Papan skor masih kosong. Jadilah pemain pertama!');
-                else alert('🏆 10 PEMAIN TERBAIK\\n\\n' + scores.map((item, index) => (index + 1) + '. ' + item.player + ' — ' + item.score + ' poin (Stage ' + item.stage + ')').join('\\n'));
+
+                overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(2,6,18,.82);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);';
+                
+                const panel = document.createElement('div');
+                panel.style.cssText = 'position:relative;width:100%;max-width:460px;max-height:85vh;overflow:auto;border:1px solid rgba(250,204,21,.35);border-radius:24px;padding:24px 20px 20px;background:linear-gradient(160deg,#172033 0%,#0b1220 65%,#111827 100%);box-shadow:0 24px 80px rgba(0,0,0,.55);color:#f8fafc;font-family:inherit;';
+                
+                const close = document.createElement('button');
+                close.type = 'button';
+                close.textContent = '×';
+                close.setAttribute('aria-label', 'Tutup papan skor');
+                close.style.cssText = 'position:absolute;top:12px;right:14px;width:36px;height:36px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:rgba(255,255,255,.07);color:#e5e7eb;font-size:26px;line-height:1;cursor:pointer;';
+                close.addEventListener('click', closeModal);
+
+                const heading = document.createElement('div');
+                heading.style.cssText = 'text-align:center;margin:2px 30px 5px;font-size:23px;font-weight:900;letter-spacing:.4px;color:#facc15;';
+                heading.textContent = '🏆 PAPAN SKOR ONLINE';
+
+                const subtitle = document.createElement('div');
+                subtitle.style.cssText = 'text-align:center;margin-bottom:20px;font-size:12px;color:#94a3b8;';
+                subtitle.textContent = '10 pemain dengan skor tertinggi';
+
+                const list = document.createElement('div');
+                list.style.cssText = 'display:flex;flex-direction:column;gap:9px;';
+
+                if (!scores.length) {
+                    const empty = document.createElement('div');
+                    empty.style.cssText = 'padding:28px 14px;text-align:center;border:1px dashed rgba(255,255,255,.18);border-radius:16px;color:#cbd5e1;';
+                    empty.textContent = 'Belum ada skor. Jadilah pemain pertama!';
+                    list.appendChild(empty);
+                } else {
+                    scores.forEach((item, index) => {
+                        const row = document.createElement('div');
+                        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.055);';
+
+                        const rank = document.createElement('div');
+                        rank.style.cssText = 'flex:0 0 34px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:' + (index === 0 ? 'rgba(250,204,21,.18)' : 'rgba(148,163,184,.13)') + ';color:' + (index === 0 ? '#facc15' : '#cbd5e1') + ';font-weight:900;';
+                        rank.textContent = String(index + 1);
+
+                        const info = document.createElement('div');
+                        info.style.cssText = 'min-width:0;flex:1;';
+                        const name = document.createElement('div');
+                        name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:800;color:#f8fafc;';
+                        name.textContent = String(item.player || 'Pemain').slice(0, 24);
+                        const stage = document.createElement('div');
+                        stage.style.cssText = 'margin-top:3px;font-size:11px;color:#94a3b8;';
+                        stage.textContent = 'STAGE ' + (Number(item.stage) || 1);
+                        info.append(name, stage);
+
+                        const points = document.createElement('div');
+                        points.style.cssText = 'flex:0 0 auto;text-align:right;font-size:15px;font-weight:900;color:#facc15;';
+                        points.textContent = (Number(item.score) || 0).toLocaleString('id-ID') + ' poin';
+
+                        row.append(rank, info, points);
+                        list.appendChild(row);
+                    });
+                }
+
+                const footer = document.createElement('div');
+                footer.style.cssText = 'display:flex;justify-content:center;margin-top:20px;';
+                const closeButton = document.createElement('button');
+                closeButton.type = 'button';
+                closeButton.textContent = 'TUTUP';
+                closeButton.style.cssText = 'min-width:140px;padding:11px 24px;border:0;border-radius:12px;background:linear-gradient(90deg,#f59e0b,#facc15);color:#111827;font-weight:900;cursor:pointer;';
+                closeButton.addEventListener('click', closeModal);
+                footer.appendChild(closeButton);
+
+                panel.append(close, heading, subtitle, list, footer);
+                overlay.appendChild(panel);
+                overlay.addEventListener('click', (event) => {
+                    if (event.target === overlay) closeModal();
+                });
+                document.body.appendChild(overlay);
+                document.addEventListener('keydown', handleEscape);
             } catch (error) {
-                alert('Belum dapat memuat papan skor. Coba lagi beberapa saat.');
+                alert('Belum dapat memuat papan skor. ' + (error.message || 'Coba lagi beberapa saat.'));
             } finally {
                 leaderboardBtn.disabled = false;
-                leaderboardBtn.innerText = '🏆 PAPAN SKOR ONLINE';
+                leaderboardBtn.innerText = originalText;
             }
         }
         leaderboardBtn.addEventListener('click', showOnlineLeaderboard);
