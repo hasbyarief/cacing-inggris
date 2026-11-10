@@ -1,4 +1,11 @@
 {
-  "updatedAt": null,
-  "scores": []
+  "updatedAt": "2026-11-10T06:46:36.576Z",
+  "scores": [
+    {
+      "player": "qwety",
+      "score": 51,
+      "stage": 1,
+      "submittedAt": "2026-11-10T06:46:36.576Z"
+    }
+  ]
 }
