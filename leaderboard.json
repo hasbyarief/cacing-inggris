@@ -1,6 +1,12 @@
 {
-  "updatedAt": "2026-11-10T06:46:36.576Z",
+  "updatedAt": "2026-11-10T07:30:35.326Z",
   "scores": [
+    {
+      "player": "Aku",
+      "score": 340,
+      "stage": 1,
+      "submittedAt": "2026-11-10T07:30:35.326Z"
+    },
     {
       "player": "qwety",
       "score": 51,
