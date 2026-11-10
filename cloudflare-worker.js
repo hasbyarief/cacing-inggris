@@ -103,8 +103,10 @@ export default {
     const path = "leaderboard.json";
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
 
+    // Fine-grained PATs contain no whitespace; remove accidental copy/paste whitespace.
+    const githubToken = String(env.GITHUB_TOKEN || "").replace(/\\s+/g, "");
     const headers = {
-      "authorization": `Bearer ${env.GITHUB_TOKEN}`,
+      "authorization": `Bearer ${githubToken}`,
       "accept": "application/vnd.github+json",
       "x-github-api-version": "2022-11-28",
       "user-agent": "cacing-inggris-leaderboard-worker"
